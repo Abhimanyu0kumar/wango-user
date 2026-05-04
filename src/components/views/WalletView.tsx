@@ -1,13 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth, useDeposits } from '@/src/hooks';
+import { useAuth, useDeposits, useWallet, useWalletLedgers, useTransactions } from '@/src/hooks';
 import { depositService } from '@/src/services/deposits';
 import type { Deposit } from '@/src/types';
+import type { WalletLedger } from '@/src/services/wallet';
+import type { Transaction } from '@/src/services/transactions';
 
 export function WalletView() {
-  const { wallet, user } = useAuth();
-  const { deposits, isLoading, refetch } = useDeposits({ per_page: 10 });
+  const { wallet: authWallet } = useAuth();
+  const { wallet, isLoading: walletLoading, refetch: refetchWallet } = useWallet();
+  const { deposits, isLoading: depositsLoading, refetch: refetchDeposits } = useDeposits({ per_page: 10 });
+  const { ledgers, isLoading: ledgersLoading, refetch: refetchLedgers } = useWalletLedgers({ per_page: 10 });
+  const { transactions, isLoading: transactionsLoading, refetch: refetchTransactions } = useTransactions({ per_page: 10 });
+  const [activeTab, setActiveTab] = useState<'deposits' | 'ledgers' | 'transactions'>('deposits');
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'bank_transfer' | 'card' | 'crypto'>('upi');
@@ -41,7 +47,9 @@ export function WalletView() {
 
       setDepositSuccess('Deposit initiated successfully!');
       setDepositAmount('');
-      refetch();
+      refetchDeposits();
+      refetchWallet();
+      refetchLedgers();
       setTimeout(() => setShowDepositModal(false), 2000);
     } catch (err: any) {
       setDepositError(err.message || 'Failed to create deposit');
@@ -53,14 +61,24 @@ export function WalletView() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
+      case 'success':
         return 'text-green-500 bg-green-500/10';
       case 'pending':
         return 'text-yellow-500 bg-yellow-500/10';
       case 'failed':
+      case 'reversed':
         return 'text-red-500 bg-red-500/10';
       default:
         return 'text-gray-500 bg-gray-500/10';
     }
+  };
+
+  const getDirectionColor = (direction: string) => {
+    return direction === 'credit' ? 'text-green-500' : 'text-red-500';
+  };
+
+  const getDirectionIcon = (direction: string) => {
+    return direction === 'credit' ? '↓' : '↑';
   };
 
   return (
@@ -70,7 +88,7 @@ export function WalletView() {
       {/* Balance Card */}
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white mb-6">
         <p className="text-sm opacity-90 mb-1">Available Balance</p>
-        <p className="text-4xl font-bold mb-4">💰 {wallet?.balance || 0}</p>
+        <p className="text-4xl font-bold mb-4">💰 {wallet?.balance || authWallet?.balance || 0}</p>
         <div className="flex gap-3">
           <button
             onClick={() => setShowDepositModal(true)}
@@ -111,53 +129,197 @@ export function WalletView() {
         </div>
       </div>
 
-      {/* Recent Deposits */}
+      {/* Tabs */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Recent Deposits</h3>
+        <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
           <button
-            onClick={() => refetch()}
-            className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+            onClick={() => setActiveTab('deposits')}
+            className={`px-4 py-2 font-medium text-sm ${
+              activeTab === 'deposits'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+            }`}
           >
-            Refresh
+            Deposits
+          </button>
+          <button
+            onClick={() => setActiveTab('ledgers')}
+            className={`px-4 py-2 font-medium text-sm ${
+              activeTab === 'ledgers'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+            }`}
+          >
+            Ledger
+          </button>
+          <button
+            onClick={() => setActiveTab('transactions')}
+            className={`px-4 py-2 font-medium text-sm ${
+              activeTab === 'transactions'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+            }`}
+          >
+            Transactions
           </button>
         </div>
 
-        {isLoading ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            <p>Loading deposits...</p>
-          </div>
-        ) : deposits.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            <p>No deposits yet</p>
-            <p className="text-sm mt-1">Click Deposit to add funds</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {deposits.map((deposit: Deposit) => (
-              <div
-                key={deposit.id}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+        {/* Tab Content */}
+        {activeTab === 'deposits' && (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Recent Deposits</h3>
+              <button
+                onClick={() => refetchDeposits()}
+                className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
               >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatusColor(deposit.status)}`}>
-                    {deposit.status === 'completed' ? '✓' : deposit.status === 'pending' ? '⏳' : '✕'}
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-800 dark:text-white">
-                      ₹{deposit.amount}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {deposit.payment_method.toUpperCase()} • {new Date(deposit.created_at || '').toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(deposit.status)}`}>
-                  {deposit.status}
-                </span>
+                Refresh
+              </button>
+            </div>
+
+            {depositsLoading ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p>Loading deposits...</p>
               </div>
-            ))}
-          </div>
+            ) : deposits.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p>No deposits yet</p>
+                <p className="text-sm mt-1">Click Deposit to add funds</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {deposits.map((deposit: Deposit) => (
+                  <div
+                    key={deposit.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatusColor(deposit.status)}`}>
+                        {deposit.status === 'completed' ? '✓' : deposit.status === 'pending' ? '⏳' : '✕'}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-800 dark:text-white">
+                          ₹{deposit.amount}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {deposit.payment_method.toUpperCase()} • {new Date(deposit.created_at || '').toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(deposit.status)}`}>
+                      {deposit.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'ledgers' && (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Wallet Ledger</h3>
+              <button
+                onClick={() => refetchLedgers()}
+                className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                Refresh
+              </button>
+            </div>
+
+            {ledgersLoading ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p>Loading ledger...</p>
+              </div>
+            ) : ledgers.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p>No ledger entries yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {ledgers.map((ledger: WalletLedger) => (
+                  <div
+                    key={ledger.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-600 ${getDirectionColor(ledger.direction)}`}>
+                        {getDirectionIcon(ledger.direction)}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-800 dark:text-white">
+                          <span className={getDirectionColor(ledger.direction)}>
+                            {ledger.direction === 'credit' ? '+' : '-'}₹{ledger.amount}
+                          </span>
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {ledger.txn_type.replace(/_/g, ' ').toUpperCase()} • {new Date(ledger.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Balance: ₹{ledger.balance_after}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'transactions' && (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Transactions</h3>
+              <button
+                onClick={() => refetchTransactions()}
+                className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                Refresh
+              </button>
+            </div>
+
+            {transactionsLoading ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p>Loading transactions...</p>
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p>No transactions yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {transactions.map((txn: Transaction) => (
+                  <div
+                    key={txn.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatusColor(txn.status)}`}>
+                        {txn.txn_type === 'credit' ? '↓' : '↑'}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-800 dark:text-white">
+                          <span className={getDirectionColor(txn.txn_type)}>
+                            {txn.txn_type === 'credit' ? '+' : '-'}₹{txn.amount}
+                          </span>
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {txn.transaction_code || txn.source_table || 'Transaction'} • {new Date(txn.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(txn.status)}`}>
+                      {txn.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 

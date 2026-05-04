@@ -2,3 +2,5 @@ export { useAuth } from './useAuth';
 export { useCategories } from './useCategories';
 export { useGames } from './useGames';
 export { useDeposits } from './useDeposits';
+export { useWallet, useWalletLedgers } from './useWallet';
+export { useTransactions } from './useTransactions';

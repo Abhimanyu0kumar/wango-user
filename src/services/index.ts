@@ -4,3 +4,5 @@ export { userService } from './user';
 export { categoryService } from './categories';
 export { gameService } from './games';
 export { depositService } from './deposits';
+export { walletService } from './wallet';
+export { transactionService } from './transactions';
