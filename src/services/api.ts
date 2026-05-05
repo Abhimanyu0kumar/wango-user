@@ -9,12 +9,13 @@ class ApiClient {
 
   private getHeaders(): Record<string, string> {
     const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const isValidToken = token && token !== 'undefined' && token !== 'null';
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
 
-    if (token) {
+    if (isValidToken) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
@@ -45,17 +46,21 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'GET' });
   }
 
-  post<T>(endpoint: string, body: unknown): Promise<T> {
+  post<T>(endpoint: string, body: unknown | FormData): Promise<T> {
+    const isFormData = body instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: isFormData ? body : JSON.stringify(body),
+      headers: isFormData ? {} : { 'Content-Type': 'application/json' },
     });
   }
 
-  put<T>(endpoint: string, body: unknown): Promise<T> {
+  put<T>(endpoint: string, body: unknown | FormData): Promise<T> {
+    const isFormData = body instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'PUT',
-      body: JSON.stringify(body),
+      body: isFormData ? body : JSON.stringify(body),
+      headers: isFormData ? {} : { 'Content-Type': 'application/json' },
     });
   }
 
@@ -69,14 +74,18 @@ export const apiClient = new ApiClient(API_BASE_URL);
 // Token management
 export const tokenManager = {
   setToken(token: string): void {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && token && token !== 'undefined' && token !== 'null') {
       localStorage.setItem('auth_token', token);
     }
   },
 
   getToken(): string | null {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('auth_token');
+      const token = localStorage.getItem('auth_token');
+      if (token === 'undefined' || token === 'null' || !token) {
+        return null;
+      }
+      return token;
     }
     return null;
   },

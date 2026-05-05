@@ -4,7 +4,11 @@ import { useState } from 'react';
 import { useAuth } from '@/src/hooks';
 import { userService } from '@/src/services';
 
-export function ProfileView() {
+interface ProfileViewProps {
+  onViewChange?: (view: 'kyc' | 'security') => void;
+}
+
+export function ProfileView({ onViewChange }: ProfileViewProps) {
   const { profile, user, wallet, refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -41,9 +45,9 @@ export function ProfileView() {
     }
   };
 
-  const handleAvatarUpdate = async (url: string) => {
+  const handleAvatarUpdate = async (file: File) => {
     try {
-      await userService.updateAvatar(url);
+      await userService.updateAvatar(file);
       setSuccess('Avatar updated!');
       refreshUser?.();
     } catch (err: any) {
@@ -58,12 +62,26 @@ export function ProfileView() {
       {/* Profile Card */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md mb-6">
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-4xl overflow-hidden cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors">
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-            ) : (
-              '👤'
-            )}
+          <div className="relative">
+            <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-4xl overflow-hidden">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                '👤'
+              )}
+            </div>
+            <label className="absolute bottom-0 right-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700 transition-colors">
+              <span className="text-white text-xs">📷</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleAvatarUpdate(file);
+                }}
+                className="hidden"
+              />
+            </label>
           </div>
           <div>
             <h3 className="text-xl font-bold text-gray-800 dark:text-white">
@@ -105,7 +123,7 @@ export function ProfileView() {
         {wallet && (
           <div className="p-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg text-white mb-4">
             <p className="text-sm opacity-90">Wallet Balance</p>
-            <p className="text-2xl font-bold">💰 {wallet.balance || 0}</p>
+            <p className="text-2xl font-bold">💰 {(wallet as any).available_balance ?? wallet.balance ?? 0}</p>
           </div>
         )}
 
@@ -247,12 +265,28 @@ export function ProfileView() {
       )}
 
       {/* Edit Profile Button */}
-      <button 
+      <button
         onClick={() => setIsEditing(true)}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors shadow-md"
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors shadow-md mb-3"
       >
         Edit Profile
       </button>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={() => onViewChange?.('kyc')}
+          className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors shadow-md"
+        >
+          KYC Verification
+        </button>
+        <button
+          onClick={() => onViewChange?.('security')}
+          className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors shadow-md"
+        >
+          Security Settings
+        </button>
+      </div>
     </div>
   );
 }

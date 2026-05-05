@@ -3,8 +3,8 @@
 import { authService } from '@/src/services';
 
 interface SidebarProps {
-  activeView: 'home' | 'games' | 'wallet' | 'profile';
-  onViewChange: (view: 'home' | 'games' | 'wallet' | 'profile') => void;
+  activeView: 'home' | 'games' | 'wallet' | 'profile' | 'kyc' | 'security';
+  onViewChange: (view: 'home' | 'games' | 'wallet' | 'profile' | 'kyc' | 'security') => void;
   onLogout: () => void;
 }
 
@@ -14,6 +14,8 @@ export function Sidebar({ activeView, onViewChange, onLogout }: SidebarProps) {
     { id: 'games' as const, label: 'Games', icon: '🎮' },
     { id: 'wallet' as const, label: 'Wallet', icon: '💰' },
     { id: 'profile' as const, label: 'Profile', icon: '👤' },
+    { id: 'kyc' as const, label: 'KYC', icon: '📋' },
+    { id: 'security' as const, label: 'Security', icon: '🔒' },
   ];
 
   return (

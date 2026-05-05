@@ -1,8 +1,8 @@
 'use client';
 
 interface MobileNavProps {
-  activeView: 'home' | 'games' | 'wallet' | 'profile';
-  onViewChange: (view: 'home' | 'games' | 'wallet' | 'profile') => void;
+  activeView: 'home' | 'games' | 'wallet' | 'profile' | 'kyc' | 'security';
+  onViewChange: (view: 'home' | 'games' | 'wallet' | 'profile' | 'kyc' | 'security') => void;
 }
 
 export function MobileNav({ activeView, onViewChange }: MobileNavProps) {
@@ -11,6 +11,8 @@ export function MobileNav({ activeView, onViewChange }: MobileNavProps) {
     { id: 'games' as const, label: 'Games', icon: '🎮' },
     { id: 'wallet' as const, label: 'Wallet', icon: '💰' },
     { id: 'profile' as const, label: 'Profile', icon: '👤' },
+    { id: 'kyc' as const, label: 'KYC', icon: '📋' },
+    { id: 'security' as const, label: 'Security', icon: '🔒' },
   ];
 
   return (

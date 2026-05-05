@@ -26,9 +26,9 @@ export const userService = {
     return apiClient.put<ApiResponse<UserProfile>>('/me', data);
   },
 
-  async updateAvatar(avatarUrl: string): Promise<ApiResponse<{ avatar_url: string }>> {
-    return apiClient.put<ApiResponse<{ avatar_url: string }>>('/me/avatar', {
-      avatar_url: avatarUrl,
-    });
+  async updateAvatar(file: File): Promise<ApiResponse<{ avatar_url: string }>> {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    return apiClient.post<ApiResponse<{ avatar_url: string }>>('/me/avatar', formData);
   },
 };

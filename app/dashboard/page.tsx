@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { useAuth } from '@/src/hooks';
 import { ProtectedRoute } from '@/src/components/auth';
 import { Sidebar, MobileNav, MobileHeader } from '@/src/components/layout';
-import { HomeView, GamesView, ProfileView, WalletView } from '@/src/components/views';
+import { HomeView, GamesView, ProfileView, WalletView, KycView, SecurityView } from '@/src/components/views';
 
 function DashboardContent() {
   const { profile, user, logout } = useAuth();
-  const [activeView, setActiveView] = useState<'home' | 'games' | 'wallet' | 'profile'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'games' | 'wallet' | 'profile' | 'kyc' | 'security'>('home');
 
   const handleLogout = async () => {
     await logout();
@@ -23,7 +23,11 @@ function DashboardContent() {
       case 'wallet':
         return <WalletView />;
       case 'profile':
-        return <ProfileView />;
+        return <ProfileView onViewChange={setActiveView} />;
+      case 'kyc':
+        return <KycView />;
+      case 'security':
+        return <SecurityView />;
       default:
         return <HomeView />;
     }

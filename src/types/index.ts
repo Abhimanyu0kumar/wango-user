@@ -24,8 +24,11 @@ export interface UserProfile {
 export interface Wallet {
   id: number;
   user_id: number;
-  balance: number;
+  balance?: number;
+  available_balance: number;
+  locked_balance: number;
   currency?: string;
+  status?: string;
 }
 
 export interface AuthResponse {
