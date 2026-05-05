@@ -1,6 +1,7 @@
 'use client';
 
 import { useGames } from '@/src/hooks';
+import Link from 'next/link';
 
 export function GamesView() {
   const { games, isLoading } = useGames({ per_page: 20 });
@@ -15,7 +16,8 @@ export function GamesView() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {games.map((game) => (
-            <div
+            <Link
+              href={game.slug === 'lucky-draw' ? '/dashboard/luckydraw' : '#'}
               key={game.id}
               className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
             >
@@ -43,7 +45,7 @@ export function GamesView() {
                   {game.category.name}
                 </p>
               )}
-            </div>
+            </Link>
           ))}
         </div>
       )}

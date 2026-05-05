@@ -1,10 +1,35 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/user/v1';
 
+export const auth = {
+  setToken(token: string) {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('auth_token', token);
+    }
+  },
+
+  getToken(): string | null {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('auth_token');
+    }
+    return null;
+  },
+
+  clearToken() {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token');
+    }
+  },
+
+  isAuthenticated(): boolean {
+    return !!this.getToken();
+  },
+};
+
 export const api = {
   baseUrl: API_BASE_URL,
 
   async request(endpoint: string, options: RequestInit = {}) {
-    const token = localStorage.getItem('auth_token');
+    const token = auth.getToken();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -15,7 +40,7 @@ export const api = {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(`${API_BASE_URL.replace('/user/v1', '')}${endpoint.startsWith('/bet') ? endpoint : '/user/v1' + endpoint}`, {
       ...options,
       headers,
     });
@@ -109,22 +134,31 @@ export const api = {
   async getGame(id: number) {
     return this.request(`/games/${id}`);
   },
-};
 
-export const auth = {
-  setToken(token: string) {
-    localStorage.setItem('auth_token', token);
+  async getActiveRounds(gameId: number) {
+    return this.request(`/games/${gameId}/active-rounds`);
   },
 
-  getToken(): string | null {
-    return localStorage.getItem('auth_token');
+  async placeBet(data: {
+    game_id: number;
+    duration_sec: number;
+    amount: number;
+    selection: string;
+    idempotency_key?: string;
+  }) {
+    return this.request('/bet/v1/place', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   },
 
-  clearToken() {
-    localStorage.removeItem('auth_token');
-  },
-
-  isAuthenticated(): boolean {
-    return !!this.getToken();
+  async getBetHistory(params?: {
+    game_id?: number;
+    status?: string;
+    per_page?: number;
+    page?: number;
+  }) {
+    const queryString = params ? '?' + new URLSearchParams(Object.entries(params).filter(([_, v]) => v !== undefined) as [string, string][]).toString() : '';
+    return this.request(`/bet/v1/history${queryString}`);
   },
 };
