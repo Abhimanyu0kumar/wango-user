@@ -30,11 +30,16 @@ export const api = {
 
   async request(endpoint: string, options: RequestInit = {}) {
     const token = auth.getToken();
+    const isFormData = options.body instanceof FormData;
+    
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
       'Accept': 'application/json',
       ...(options.headers as Record<string, string>),
     };
+
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -102,10 +107,12 @@ export const api = {
     });
   },
 
-  async updateAvatar(avatarUrl: string) {
+  async updateAvatar(file: File) {
+    const formData = new FormData();
+    formData.append('avatar', file);
     return this.request('/me/avatar', {
-      method: 'PUT',
-      body: JSON.stringify({ avatar_url: avatarUrl }),
+      method: 'POST',
+      body: formData,
     });
   },
 

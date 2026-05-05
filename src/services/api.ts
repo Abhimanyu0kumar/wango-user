@@ -26,6 +26,11 @@ class ApiClient {
     const url = `${this.baseUrl}${endpoint}`;
     const headers = this.getHeaders();
 
+    // If body is FormData, delete Content-Type to let browser set it with boundary
+    if (options.body instanceof FormData) {
+      delete headers['Content-Type'];
+    }
+
     const response = await fetch(url, {
       ...options,
       headers: {
